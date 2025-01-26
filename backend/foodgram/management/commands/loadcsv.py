@@ -2,9 +2,9 @@ import os
 from csv import reader
 
 from django.core.management.base import BaseCommand
+from foodgram_backend.settings import BASE_DIR
 
 from foodgram.models import Ingredient, Tag
-from foodgram_backend.settings import BASE_DIR
 
 
 def load_ingredients(row):

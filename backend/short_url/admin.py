@@ -1,5 +1,4 @@
 from django.contrib import admin
-
 from short_url.models import ShortLink
 
 admin.site.empty_value_display = 'Не задано'

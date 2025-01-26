@@ -1,16 +1,6 @@
 import random
 import string
 
-from django.contrib.auth import get_user_model
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from djoser.conf import settings
-from djoser.views import UserViewSet
-from rest_framework import status, viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-
 from api.filters import IngredientFilter, RecipeFilter
 from api.paginators import LimitNumberPaginator, LimitSubscriptionsPaginator
 from api.permissions import IsAuthorOrAdminOnly
@@ -21,9 +11,19 @@ from api.serializers import (AvatarSeializer, FavoriteCreateSerializer,
                              SubscriptionCreateSerializer,
                              SubscriptionSerializer, TagSerializer,
                              UserListSerializer)
+from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from djoser.conf import settings
+from djoser.views import UserViewSet
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from short_url.models import ShortLink
+
 from foodgram.constants import MAX_SHORT_URL_LENGTH
 from foodgram.models import Favorite, Ingredient, Recipe, Subscription, Tag
-from short_url.models import ShortLink
 
 CustomUser = get_user_model()
 

@@ -2,12 +2,13 @@ import base64
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
+
 from foodgram.constants import (MAX_AMOUNT_VALUE, MAX_COOKING_TIME_VALUE,
                                 MAX_INGREDIENTS_VALUE)
 from foodgram.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                              ShoppingCart, Subscription, Tag, TagRecipe)
-from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
 
 CustomUser = get_user_model()
 

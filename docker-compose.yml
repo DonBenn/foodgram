@@ -1,0 +1,46 @@
+version: '3'
+
+volumes:
+  pg_data:
+  static:
+  media:
+
+services:
+
+  PostgreSQL:
+    image: postgres:13
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend/
+    env_file: .env
+    volumes:
+      - static:/backend_static
+      - media:/app/media
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic &&
+             cp -r /app/collected_static/. /backend_static/static/ &&
+             python manage.py loadcsv &&
+             gunicorn --bind 0.0.0.0:8000 foodgram_backend.wsgi"  
+    depends_on:
+      - PostgreSQL  
+
+  frontend:
+    env_file: .env
+    build: ./frontend/
+    command: cp -r /app/build/. /static/
+    volumes:
+      - static:/static
+
+  nginx:
+    build: ./nginx/
+    env_file: .env
+    ports:
+      - 8000:80
+    volumes:
+      - static:/static
+      - media:/media
+      - ../templates/:/usr/share/nginx/html/redoc/

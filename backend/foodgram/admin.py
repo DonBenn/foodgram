@@ -1,5 +1,4 @@
 from django.contrib import admin
-
 from foodgram.models import (CustomUser, Favorite, Ingredient,
                              IngredientRecipe, Recipe, ShoppingCart,
                              Subscription, Tag, TagRecipe)

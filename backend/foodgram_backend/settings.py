@@ -14,7 +14,6 @@ DEBUG = env.bool('DEBUG_VALUE', default=True)
 
 ALLOWED_HOSTS = env.list('APPROVED_HOSTS', default=['84.201.154.209', 'localhost', '127.0.0.1', 'recipegram.sytes.net'])
 
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

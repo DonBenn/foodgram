@@ -1,5 +1,9 @@
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 
+from foodgram.constants import MAX_INGREDIENTS_VALUE
+from foodgram.forms import (RecipeForm, IngredientRecipeForm,
+                            TagRecipeForm, SubscriptionForm)
 from foodgram.models import (CustomUser, Favorite, Ingredient,
                              IngredientRecipe, Recipe, ShoppingCart,
                              Subscription, Tag, TagRecipe)
@@ -7,8 +11,30 @@ from foodgram.models import (CustomUser, Favorite, Ingredient,
 admin.site.empty_value_display = 'Не задано'
 
 
+class IngredientRecipeInline(admin.StackedInline):
+    """Настройки отображения связанной модели Рецептов."""
+
+    model = IngredientRecipe
+    extra = 0
+    form = IngredientRecipeForm
+
+
+class TagRecipeInline(admin.StackedInline):
+    """Настройки отображения связанной модели Рецептов."""
+
+    model = TagRecipe
+    extra = 0
+    form = TagRecipeForm
+
+
 class RecipeAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Рецептов."""
+
+    form = RecipeForm
+    inlines = (
+        IngredientRecipeInline,
+        TagRecipeInline
+    )
 
     list_display = (
         'name',
@@ -19,6 +45,12 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = ('name', 'author__username')
     list_filter = ('tags',)
     list_display_links = ('name',)
+
+    def save_model(self, request, obj, form, change):
+        obj.ingredients.all()
+        if obj.ingredients.count() > MAX_INGREDIENTS_VALUE:
+            raise ValidationError('Слишком много игредиентов.')
+        super().save_model(request, obj, form, change)
 
     def get_favorite_count(self, obj):
         """Функция подсчёта колличества избанного у рецепта."""
@@ -36,6 +68,14 @@ class IngredientAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     list_display_links = ('name',)
 
+    def save_model(self, request, obj, form, change):
+        if not obj.name:
+            raise ValidationError('Выберите название.')
+        if not obj.measurement_unit:
+            raise ValidationError('Выберите единицу измерения.')
+        obj.clean()
+        super().save_model(request, obj, form, change)
+
 
 class TagAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Тэгов."""
@@ -46,6 +86,14 @@ class TagAdmin(admin.ModelAdmin):
     )
     search_fields = ('slug',)
     list_display_links = ('name',)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.name:
+            raise ValidationError('Выберите тэги.')
+        if not obj.slug:
+            raise ValidationError('Выберите слаг.')
+        obj.clean()
+        super().save_model(request, obj, form, change)
 
 
 class CustomUserAdmin(admin.ModelAdmin):
@@ -58,6 +106,14 @@ class CustomUserAdmin(admin.ModelAdmin):
     search_fields = ('email', 'username')
     list_display_links = ('username',)
 
+    def save_model(self, request, obj, form, change):
+        if not obj.username:
+            raise ValidationError('Выберите юзернейм.')
+        if not obj.email:
+            raise ValidationError('Выберите почту.')
+        obj.clean()
+        super().save_model(request, obj, form, change)
+
 
 class FavoriteAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Избранного."""
@@ -69,6 +125,14 @@ class FavoriteAdmin(admin.ModelAdmin):
 
     search_fields = ('user__username',)
 
+    def save_model(self, request, obj, form, change):
+        if not obj.user:
+            raise ValidationError('Выберите пользователя.')
+        if not obj.recipe:
+            raise ValidationError('Выберите рецепт.')
+        obj.clean()
+        super().save_model(request, obj, form, change)
+
 
 class ShoppingCartAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Списка покупок."""
@@ -76,17 +140,24 @@ class ShoppingCartAdmin(admin.ModelAdmin):
     list_display = (
         'user',
         'recipe',
-        'ingredient',
-        'amount',
     )
 
     search_fields = ('user__username',)
     list_display_links = ('user',)
 
+    def save_model(self, request, obj, form, change):
+        if not obj.user:
+            raise ValidationError('Выберите пользователя.')
+        if not obj.recipe:
+            raise ValidationError('Выберите рецепт.')
+        obj.clean()
+        super().save_model(request, obj, form, change)
+
 
 class SubscriptionAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Подписок."""
 
+    form = SubscriptionForm
     list_display = (
         'user',
         'subscription'
@@ -94,6 +165,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
     search_fields = ('user__username',)
     list_display_links = ('user',)
+
+    def save_model(self, request, obj, form, change):
+        obj.clean()
+        super().save_model(request, obj, form, change)
 
 
 class IngredientRecipeAdmin(admin.ModelAdmin):
@@ -108,6 +183,14 @@ class IngredientRecipeAdmin(admin.ModelAdmin):
     search_fields = ('recipe__name',)
     list_display_links = ('recipe',)
 
+    def save_model(self, request, obj, form, change):
+        if not obj.ingredient:
+            raise ValidationError('Выберите ингредиенты.')
+        if not obj.recipe:
+            raise ValidationError('Выберите рецепт.')
+        if not obj.amount:
+            raise ValidationError('Введите количество.')
+
 
 class TagRecipeAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Тэгов Рецепта."""
@@ -117,6 +200,12 @@ class TagRecipeAdmin(admin.ModelAdmin):
         'recipe'
     )
     search_fields = ('recipe__name',)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.tag:
+            raise ValidationError('Выберите тэги.')
+        if not obj.recipe:
+            raise ValidationError('Выберите рецепт.')
 
 
 admin.site.register(Recipe, RecipeAdmin)

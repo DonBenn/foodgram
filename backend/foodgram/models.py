@@ -2,12 +2,15 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import (FileExtensionValidator, MaxValueValidator,
                                     MinValueValidator)
 from django.db import models
+from django.db.models import Q
+from django.forms import ValidationError
 
 from foodgram.constants import (MAX_COOKING_TIME_SCORE, MAX_EMAIL_LENGTH,
                                 MAX_FIRST_NAME_LENGTH, MAX_INGREDIENT_LENGTH,
                                 MAX_LAST_NAME_LENGTH, MAX_PASSWORD_LENGTH,
                                 MAX_RECIPE_LENGTH, MAX_TAG_LENGTH,
-                                MAX_USERNAME_LENGTH, MIN_COOKING_TIME_SCORE)
+                                MAX_USERNAME_LENGTH, MIN_COOKING_TIME_SCORE,
+                                MAX_AMOUNT_VALUE, MIN_AMOUNT_VALUE)
 from foodgram.validators import validate_username
 
 
@@ -84,6 +87,12 @@ class Tag(models.Model):
         ordering = ['name']
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('name', 'slug'),
+                name='name_slug_constraint'
+            ),
+        ]
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
@@ -109,6 +118,12 @@ class Ingredient(models.Model):
         ordering = ['name']
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('name', 'measurement_unit'),
+                name='name_measurement_unit_constraint'
+            ),
+        ]
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
@@ -136,7 +151,6 @@ class Recipe(models.Model):
     )
     text = models.TextField()
     cooking_time = models.PositiveSmallIntegerField(
-        default=1,
         validators=[
             MinValueValidator(MIN_COOKING_TIME_SCORE),
             MaxValueValidator(MAX_COOKING_TIME_SCORE),
@@ -154,20 +168,26 @@ class Recipe(models.Model):
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
 
-    def get_favorite_count(self):
-        """Функция подсчёта колличества избанного у рецепта."""
-        return self.favorite.count()
-
     def __str__(self):
         """Возвращает строковое представление объекта."""
         return self.name
+
+    def get_favorite_count(self):
+        """Функция подсчёта колличества избанного у рецепта."""
+        return self.favorite.count()
 
 
 class TagRecipe(models.Model):
     """Настройки модели Тэгов рецепта."""
 
-    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    tag = models.ForeignKey(
+        Tag, on_delete=models.CASCADE,
+        related_name='tag_recipe'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE,
+        related_name='tag_recipe'
+    )
 
     class Meta:
         """Метаданные модели Избранное."""
@@ -186,14 +206,19 @@ class IngredientRecipe(models.Model):
 
     ingredient = models.ForeignKey(
         Ingredient, on_delete=models.CASCADE,
-        related_name='ingredientrecipe'
+        related_name='ingredient_recipe'
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='ingredientrecipe'
+        related_name='ingredient_recipe'
     )
-    amount = models.PositiveSmallIntegerField(default=0)
+    amount = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(MIN_AMOUNT_VALUE),
+            MaxValueValidator(MAX_AMOUNT_VALUE),
+        ],
+    )
 
     class Meta:
         """Метаданные модели Избранное."""
@@ -232,7 +257,7 @@ class Favorite(models.Model):
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
-        return self.recipe
+        return f'{self.user} {self.recipe}'
 
 
 class ShoppingCart(models.Model):
@@ -244,10 +269,6 @@ class ShoppingCart(models.Model):
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, related_name='shopping_cart'
     )
-    ingredient = models.ForeignKey(
-        Ingredient, on_delete=models.CASCADE, related_name='shopping_cart'
-    )
-    amount = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         """Метаданные модели Список покупок."""
@@ -257,14 +278,14 @@ class ShoppingCart(models.Model):
         verbose_name_plural = 'Список покупок'
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'recipe', 'ingredient'],
-                name='unique_user_recipe_ingredient'
+                fields=['user', 'recipe'],
+                name='unique_user_shopping_cart_recipe'
             )
         ]
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
-        return self.recipe
+        return f'{self.user} {self.recipe}'
 
 
 class Subscription(models.Model):
@@ -284,10 +305,18 @@ class Subscription(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'subscription'],
-                name='unique_user_subscription'
+                name='unique_user_subscription',
+            ),
+            models.CheckConstraint(
+                check=~Q(user=models.F('subscription')),
+                name='not_self_subscription'
             )
         ]
 
     def __str__(self):
         """Возвращает строковое представление объекта."""
-        return self.user
+        return f'{self.user} {self.subscription}'
+
+    def clean(self):
+        if self.user_id == self.subscription_id:
+            raise ValidationError('Нельзя подписаться на самого себя')

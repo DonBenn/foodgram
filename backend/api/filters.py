@@ -5,7 +5,7 @@ from rest_framework.filters import SearchFilter
 
 from foodgram.models import Recipe
 
-CustomUser = get_user_model()
+Profile = get_user_model()
 
 
 class IngredientFilter(SearchFilter):
@@ -22,7 +22,6 @@ class RecipeFilter(filters.FilterSet):
     is_in_shopping_cart = filters.BooleanFilter(
         method='filter_is_in_shopping_cart'
     )
-    author = filters.ModelChoiceFilter(queryset=CustomUser.objects.all())
 
     class Meta:
         model = Recipe
@@ -40,8 +39,6 @@ class RecipeFilter(filters.FilterSet):
 
         if value:
             return queryset.filter(favorite__user=self.request.user)
-        else:
-            return queryset.exclude(favorite__user=self.request.user)
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         """Метод фильтрации, в списке покупок ли рецепт."""
@@ -49,8 +46,4 @@ class RecipeFilter(filters.FilterSet):
             return queryset.none()
 
         if value:
-            return queryset.filter(
-                shopping_cart__user=self.request.user
-            ).distinct()
-        else:
-            return queryset.exclude(shopping_cart__user=self.request.user)
+            return queryset.filter(shopping_cart__user=self.request.user)

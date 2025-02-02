@@ -1,10 +1,9 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 
-from foodgram.constants import MAX_INGREDIENTS_VALUE
 from foodgram.forms import (RecipeForm, IngredientRecipeForm,
                             TagRecipeForm, SubscriptionForm)
-from foodgram.models import (CustomUser, Favorite, Ingredient,
+from foodgram.models import (Profile, Favorite, Ingredient,
                              IngredientRecipe, Recipe, ShoppingCart,
                              Subscription, Tag, TagRecipe)
 
@@ -47,9 +46,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
 
     def save_model(self, request, obj, form, change):
-        obj.ingredients.all()
-        if obj.ingredients.count() > MAX_INGREDIENTS_VALUE:
-            raise ValidationError('Слишком много игредиентов.')
+        obj.clean()
         super().save_model(request, obj, form, change)
 
     def get_favorite_count(self, obj):
@@ -96,7 +93,7 @@ class TagAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-class CustomUserAdmin(admin.ModelAdmin):
+class ProfileAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Пользователя."""
 
     list_display = (
@@ -211,7 +208,7 @@ class TagRecipeAdmin(admin.ModelAdmin):
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
-admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(Profile, ProfileAdmin)
 admin.site.register(Favorite, FavoriteAdmin)
 admin.site.register(ShoppingCart, ShoppingCartAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)

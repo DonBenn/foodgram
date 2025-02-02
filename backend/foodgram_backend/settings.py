@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'djoser',
-    'django_filters',
+    'django_filters'
 ]
 
 
@@ -98,7 +98,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-AUTH_USER_MODEL = 'foodgram.CustomUser'
+AUTH_USER_MODEL = 'foodgram.Profile'
 
 DJOSER = {
     'HIDE_USERS': False,
@@ -130,5 +130,3 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-LOGIN_REDIRECT_URL = 'api:users'

@@ -1,11 +1,8 @@
-from django.contrib.auth import get_user_model
 from django_filters import AllValuesMultipleFilter
 from django_filters import rest_framework as filters
 from rest_framework.filters import SearchFilter
 
 from foodgram.models import Recipe
-
-Profile = get_user_model()
 
 
 class IngredientFilter(SearchFilter):

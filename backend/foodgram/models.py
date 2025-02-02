@@ -3,7 +3,6 @@ from django.core.validators import (FileExtensionValidator, MaxValueValidator,
                                     MinValueValidator)
 from django.db import models
 from django.db.models import Q
-from django.forms import ValidationError
 
 from foodgram.constants import (MAX_COOKING_TIME_SCORE, MAX_EMAIL_LENGTH,
                                 MAX_FIRST_NAME_LENGTH, MAX_INGREDIENT_LENGTH,
@@ -14,7 +13,7 @@ from foodgram.constants import (MAX_COOKING_TIME_SCORE, MAX_EMAIL_LENGTH,
 from foodgram.validators import validate_username
 
 
-class CustomUser(AbstractUser):
+class Profile(AbstractUser):
     """Настройки модели Пользователя."""
 
     USERNAME_FIELD = 'email'
@@ -134,7 +133,7 @@ class Recipe(models.Model):
     """Настройки модели Рецептов."""
 
     author = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='recipes'
+        Profile, on_delete=models.CASCADE, related_name='recipes'
     )
     name = models.CharField(max_length=MAX_RECIPE_LENGTH)
     ingredients = models.ManyToManyField(
@@ -236,7 +235,7 @@ class Favorite(models.Model):
     """Настройки модели Избранное."""
 
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='favorite'
+        Profile, on_delete=models.CASCADE, related_name='favorite'
     )
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, related_name='favorite'
@@ -264,7 +263,7 @@ class ShoppingCart(models.Model):
     """Настройки модели Список покупок."""
 
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='shopping_cart'
+        Profile, on_delete=models.CASCADE, related_name='shopping_cart'
     )
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, related_name='shopping_cart'
@@ -292,9 +291,9 @@ class Subscription(models.Model):
     """Настройки модели Подписок."""
 
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='subscriber')
+        Profile, on_delete=models.CASCADE, related_name='subscriber')
     subscription = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='subscription')
+        Profile, on_delete=models.CASCADE, related_name='subscription')
 
     class Meta:
         """Метаданные модели подписок."""
@@ -316,7 +315,3 @@ class Subscription(models.Model):
     def __str__(self):
         """Возвращает строковое представление объекта."""
         return f'{self.user} {self.subscription}'
-
-    def clean(self):
-        if self.user_id == self.subscription_id:
-            raise ValidationError('Нельзя подписаться на самого себя')

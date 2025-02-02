@@ -1,10 +1,10 @@
-from django.db.models import F
-from django.contrib.auth import get_user_model
+from django.db.models import F, Exists, OuterRef
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.conf import settings
 from djoser.views import UserViewSet
+from django.urls import reverse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -20,10 +20,9 @@ from api.serializers import (AvatarSeializer, FavoriteCreateSerializer,
                              SubscriptionCreateSerializer,
                              SubscriptionSerializer)
 from api.utils import generate_short_url
-from foodgram.models import Ingredient, Recipe, Tag
+from foodgram.models import (Ingredient, Recipe, Tag, Favorite,
+                             ShoppingCart, Profile)
 from short_url.models import ShortLink
-
-Profile = get_user_model()
 
 
 class ProfileViewSet(UserViewSet):
@@ -79,11 +78,9 @@ class ProfileViewSet(UserViewSet):
     )
     def get_subscriptions(self, request):
         """Метод получения подписок пользователя."""
-
         users_we_follow = Profile.objects.filter(
-            subscriber__subscription=request.user
+            subscription__user=request.user
         )
-        limit_param = request.query_params.get('recipes_limit')
         paginator = LimitSubscriptionsPaginator()
         paginated_users_we_follow = paginator.paginate_queryset(
             users_we_follow,
@@ -92,7 +89,7 @@ class ProfileViewSet(UserViewSet):
         serializer = SubscriptionSerializer(
             paginated_users_we_follow,
             many=True,
-            context={'request': request, 'limit_param': limit_param}
+            context={'request': request}
         )
         paginated_data = paginator.get_paginated_response(serializer.data)
         return paginated_data
@@ -157,20 +154,35 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
     pagination_class = LimitNumberPaginator
 
+    def get_queryset(self):
+        """Метод переопределения кверисета для рецепта."""
+        if self.request.user.is_authenticated:
+            favorites_exists = Favorite.objects.filter(
+                user=self.request.user, recipe=OuterRef('pk')
+            )
+            shopping_cart_exists = ShoppingCart.objects.filter(
+                user=self.request.user, recipe=OuterRef('pk')
+            )
+            queryset = self.queryset.annotate(
+                is_favorited=Exists(favorites_exists),
+                is_in_shopping_cart=Exists(shopping_cart_exists)
+            )
+        else:
+            queryset = self.queryset
+        return queryset
+
     def get_serializer_class(self):
         """Метод выбора сериалайзера для рецепта."""
-        if self.action == 'create' or self.action == 'partial_update':
+        if self.action in ('create', 'partial_update'):
             return RecipeCreateSerializer
         return RecipeSerializer
 
     def get_permissions(self):
         """Метод получает разрешения для текущего пользователя."""
         if self.action == 'create':
-            self.permission_classes = [IsAuthenticated]
-        if self.action == 'partial_update' or (
-            self.action == 'delete'
-        ):
-            self.permission_classes = [IsAuthorOrAdminOnly]
+            self.permission_classes = (IsAuthenticated,)
+        if self.action in ('partial_update', 'destroy'):
+            self.permission_classes = (IsAuthorOrAdminOnly,)
         return super().get_permissions()
 
     @action(
@@ -181,20 +193,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk):
         """Метод получения короткой ссылки рецепта."""
         get_object_or_404(Recipe, id=pk)
-        full_url = request.build_absolute_uri()
-        long_url = full_url.replace('api/', '').replace('get-link/', '')
+        long_url = request.build_absolute_uri(
+            reverse('recipes-detail', args=[pk])
+        )
         short_url = generate_short_url()
         url, created = ShortLink.objects.get_or_create(long_url=long_url)
 
         if not created:
-            short_prefix = '/s/' + url.short_url
-            new_url = request.build_absolute_uri(short_prefix)
+            new_url = request.build_absolute_uri(
+                reverse('redirect_url', args=[url.short_url])
+            )
             return Response({'short-link': new_url}, status=status.HTTP_200_OK)
 
         url.short_url = short_url
         url.save()
-        short_prefix = '/s/' + url.short_url
-        new_url = request.build_absolute_uri(short_prefix)
+        new_url = request.build_absolute_uri(
+            reverse('redirect_url', args=[url.short_url])
+        )
         return Response({'short-link': new_url}, status=status.HTTP_200_OK)
 
     @action(

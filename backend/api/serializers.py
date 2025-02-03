@@ -81,13 +81,12 @@ class IgredientRecipeSerializer(serializers.ModelSerializer):
     """Сериалайзер Ингредиентов и Количества."""
 
     id = serializers.PrimaryKeyRelatedField(
-        queryset=Ingredient.objects.all(), source='ingredient'
+        queryset=Ingredient.objects.all(), source='ingredient.id'
     )
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
     )
-    amount = serializers.IntegerField()
 
     class Meta:
         """Метаданные сериализатора Ингредиентов и Количества."""
@@ -151,9 +150,10 @@ class CreateIgredientRecipeSerializer(serializers.ModelSerializer):
 
     def validate_amount(self, value):
         """Метод валидации поля ингредиентов."""
-        if value < MIN_AMOUNT_VALUE or value > MAX_AMOUNT_VALUE:
+        if value not in range(MIN_AMOUNT_VALUE, MAX_AMOUNT_VALUE):
             raise serializers.ValidationError(
-                'Выберете колличество от 1 до 20000.'
+                f'Выберете диапозон колличества от {MIN_AMOUNT_VALUE} до '
+                f'{MAX_AMOUNT_VALUE}.'
             )
         return value
 
@@ -217,9 +217,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     def validate_cooking_time(self, value):
         """Метод валидации поля время приготовления."""
-        if value < MIN_COOKING_TIME_SCORE or value > MAX_COOKING_TIME_SCORE:
+        if value not in range(MIN_COOKING_TIME_SCORE, MAX_COOKING_TIME_SCORE):
             raise serializers.ValidationError(
-                'Выберете от 1 до 1000 минут.'
+                f'Выберете диапазон от {MIN_COOKING_TIME_SCORE} до '
+                f'{MAX_COOKING_TIME_SCORE} минут.'
             )
         return value
 
@@ -343,8 +344,6 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     subscription = serializers.PrimaryKeyRelatedField(
         queryset=Profile.objects.all()
     )
-    recipes_count = serializers.SerializerMethodField()
-    recipes = serializers.SerializerMethodField()
 
     class Meta:
         """Метаданные сериализатора создания подписак пользователя."""
@@ -353,8 +352,6 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         fields = (
             'user',
             'subscription',
-            'recipes_count',
-            'recipes',
         )
         validators = [
             UniqueTogetherValidator(
@@ -371,34 +368,31 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def get_recipes_count(self, obj):
-        """Метод подсчёта количесва рецептов."""
-        return obj.subscription.recipes.count()
-
-    def get_recipes(self, obj):
-        """Метод отображения сокращённой информации рецепта."""
-        recipes = obj.subscription.recipes.all()
-        serializer = RecipeMinifiedSerializer(recipes, many=True)
-        return serializer.data
-
     def to_representation(self, instance):
         """Метод представления создания подписок."""
-        data = super().to_representation(instance)
-        all_recipes = data.pop('recipes')
+        recipes = instance.subscription.recipes.all()
+        recipes_count = instance.subscription.recipes.count()
 
         if self.context['request'].query_params:
             if 'recipes_limit' in self.context['request'].query_params:
                 recipes_limit = self.context['request'].query_params.get(
                     'recipes_limit'
                 )
-                all_recipes = all_recipes[:int(recipes_limit)]
+                try:
+                    int(recipes_limit)
+                    recipes = recipes[:int(recipes_limit)]
+                except ValueError:
+                    print(f'{recipes_limit} не является числом. '
+                          f'Введите число рецептов')
 
         serializer = UserListSerializer(
             instance.subscription, context={'request': self.context['request']}
         )
         subscription = serializer.data
-        subscription['recipes_count'] = data.pop('recipes_count')
-        subscription['recipes'] = all_recipes
+
+        serializer = RecipeMinifiedSerializer(recipes, many=True)
+        subscription['recipes_count'] = recipes_count
+        subscription['recipes'] = serializer.data
         return subscription
 
 
@@ -428,6 +422,11 @@ class SubscriptionSerializer(UserListSerializer):
                 recipes_limit = self.context['request'].query_params.get(
                     'recipes_limit'
                 )
-                recipes = recipes[:int(recipes_limit)]
+                try:
+                    int(recipes_limit)
+                    recipes = recipes[:int(recipes_limit)]
+                except ValueError:
+                    print(f'{recipes_limit} не является числом. '
+                          f'Введите число рецептов')
         serializer = RecipeMinifiedSerializer(recipes, many=True)
         return serializer.data

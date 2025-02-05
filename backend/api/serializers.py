@@ -370,30 +370,10 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         """Метод представления создания подписок."""
-        recipes = instance.subscription.recipes.all()
-        recipes_count = instance.subscription.recipes.count()
-
-        if self.context['request'].query_params:
-            if 'recipes_limit' in self.context['request'].query_params:
-                recipes_limit = self.context['request'].query_params.get(
-                    'recipes_limit'
-                )
-                try:
-                    int(recipes_limit)
-                    recipes = recipes[:int(recipes_limit)]
-                except ValueError:
-                    print(f'{recipes_limit} не является числом. '
-                          f'Введите число рецептов')
-
-        serializer = UserListSerializer(
+        serializer = SubscriptionSerializer(
             instance.subscription, context={'request': self.context['request']}
         )
-        subscription = serializer.data
-
-        serializer = RecipeMinifiedSerializer(recipes, many=True)
-        subscription['recipes_count'] = recipes_count
-        subscription['recipes'] = serializer.data
-        return subscription
+        return serializer.data
 
 
 class SubscriptionSerializer(UserListSerializer):
@@ -426,7 +406,8 @@ class SubscriptionSerializer(UserListSerializer):
                     int(recipes_limit)
                     recipes = recipes[:int(recipes_limit)]
                 except ValueError:
-                    print(f'{recipes_limit} не является числом. '
-                          f'Введите число рецептов')
+                    raise serializers.ValidationError(
+                        f'{recipes_limit} не является числом. '
+                        'Введите число рецептов.')
         serializer = RecipeMinifiedSerializer(recipes, many=True)
         return serializer.data

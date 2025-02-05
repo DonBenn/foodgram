@@ -4,10 +4,9 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.conf import settings
 from djoser.views import UserViewSet
-from django.urls import reverse
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from api.filters import IngredientFilter, RecipeFilter
@@ -19,10 +18,9 @@ from api.serializers import (AvatarSeializer, FavoriteCreateSerializer,
                              ShoppingCartSerializer, TagSerializer,
                              SubscriptionCreateSerializer,
                              SubscriptionSerializer)
-from api.utils import generate_short_url
+from api.utils import get_new_url
 from foodgram.models import (Ingredient, Recipe, Tag, Favorite,
                              ShoppingCart, Profile)
-from short_url.models import ShortLink
 
 
 class ProfileViewSet(UserViewSet):
@@ -193,24 +191,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk):
         """Метод получения короткой ссылки рецепта."""
         recipe = get_object_or_404(Recipe, id=pk)
-        long_url = request.build_absolute_uri(
-            reverse('recipes-detail', args=[recipe.id])
-        )
-        short_url = generate_short_url()
-        url, created = ShortLink.objects.get_or_create(long_url=long_url)
-
-        if not created:
-            new_url = request.build_absolute_uri(
-                reverse('redirect_url', args=[url.short_url])
-            )
-            return Response({'short-link': new_url}, status=status.HTTP_200_OK)
-
-        url.short_url = short_url
-        url.save()
-        new_url = request.build_absolute_uri(
-            reverse('redirect_url', args=[url.short_url])
-        )
-        return Response({'short-link': new_url}, status=status.HTTP_200_OK)
+        return Response({'short-link': get_new_url(request, recipe.id)},
+                        status=status.HTTP_200_OK)
 
     @action(
         methods=['POST', 'DELETE'],

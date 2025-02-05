@@ -61,7 +61,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodgram_backend.wsgi.application'
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -104,14 +103,14 @@ DJOSER = {
     'HIDE_USERS': False,
     'LOGIN_FIELD': 'email',
     'LOGIN_METHOD': 'token',
-    "PERMISSIONS": {
-            "user": ["rest_framework.permissions.AllowAny"],
-            "user_list": ["rest_framework.permissions.AllowAny"],
+    'PERMISSIONS': {
+            'user': ["rest_framework.permissions.AllowAny"],
+            'user_list': ["rest_framework.permissions.AllowAny"],
     }
 
 }
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru-RU'
 
 TIME_ZONE = 'UTC'
 

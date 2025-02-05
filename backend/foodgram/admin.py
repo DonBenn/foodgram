@@ -45,9 +45,24 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('tags',)
     list_display_links = ('name',)
 
-    def save_model(self, request, obj, form, change):
-        obj.clean()
-        super().save_model(request, obj, form, change)
+    def save_formset(self, request, form, formset, change):
+        if formset.model == TagRecipe:
+            tags = [form.cleaned_data['tag'] for
+                    form in formset.forms if form.cleaned_data]
+            if len(tags) != len(set(tags)):
+                raise ValidationError('Теги должны быть уникальными.')
+
+        if formset.model == IngredientRecipe:
+            ingredients = [form.cleaned_data['ingredient'] for
+                           form in formset.forms if form.cleaned_data]
+            unique_ingredients = []
+            for ingredient in ingredients:
+                if ingredient not in unique_ingredients:
+                    unique_ingredients.append(ingredient)
+
+            if len(ingredients) != len(unique_ingredients):
+                raise ValidationError('Ингредиенты должны быть уникальными.')
+        formset.save()
 
     def get_favorite_count(self, obj):
         """Функция подсчёта колличества избанного у рецепта."""

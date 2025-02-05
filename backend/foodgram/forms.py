@@ -2,7 +2,8 @@ from django import forms
 
 from foodgram.models import (Recipe, Ingredient, IngredientRecipe,
                              TagRecipe, Tag, Subscription)
-from foodgram.constants import MAX_AMOUNT_VALUE, MIN_AMOUNT_VALUE
+from foodgram.constants import (MAX_AMOUNT_VALUE, MIN_AMOUNT_VALUE,
+                                MIN_COOKING_TIME_SCORE, MAX_COOKING_TIME_SCORE)
 
 
 class TagRecipeForm(forms.ModelForm):
@@ -42,10 +43,12 @@ class IngredientRecipeForm(forms.ModelForm):
         if not Ingredient.objects.filter(id=ingredient.id).exists():
             self.add_error('ingredient', 'Нет такого ингредиента.')
 
-        if int(amount) < MIN_AMOUNT_VALUE:
-            self.add_error('amount', 'Слишком маленькое колличество.')
-        if int(amount) > MAX_AMOUNT_VALUE:
-            self.add_error('amount', 'Слишком большое колличество.')
+        if amount not in range(MIN_AMOUNT_VALUE, MAX_AMOUNT_VALUE):
+            self.add_error(
+                'amount',
+                f'Выберете диапозон колличества от {MIN_AMOUNT_VALUE} до'
+                f' {MAX_AMOUNT_VALUE}.'
+            )
 
         return cleaned_data
 
@@ -60,8 +63,22 @@ class RecipeForm(forms.ModelForm):
             'author',
             'name',
             'text',
-            'cooking_time'
+            'cooking_time',
+            'tags',
         )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cooking_time = cleaned_data.get('cooking_time')
+
+        if cooking_time not in range(
+            MIN_COOKING_TIME_SCORE, MAX_COOKING_TIME_SCORE
+        ):
+            self.add_error(
+                'cooking_time',
+                f'Выберете диапазон от {MIN_COOKING_TIME_SCORE}'
+                f'до {MAX_COOKING_TIME_SCORE} минут.'
+            )
 
 
 class SubscriptionForm(forms.ModelForm):

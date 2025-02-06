@@ -51,7 +51,6 @@ class RecipeAdmin(admin.ModelAdmin):
                     form in formset.forms if form.cleaned_data]
             if len(tags) != len(set(tags)):
                 raise ValidationError('Теги должны быть уникальными.')
-
         if formset.model == IngredientRecipe:
             ingredients = [form.cleaned_data['ingredient'] for
                            form in formset.forms if form.cleaned_data]
@@ -67,6 +66,9 @@ class RecipeAdmin(admin.ModelAdmin):
     def get_favorite_count(self, obj):
         """Функция подсчёта колличества избанного у рецепта."""
         return obj.get_favorite_count()
+
+    get_favorite_count.short_description = 'В избранном'
+    get_favorite_count.admin_order_field = 'get_favorite_count'
 
 
 class IngredientAdmin(admin.ModelAdmin):
@@ -108,15 +110,101 @@ class TagAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+class RecipesFilter(admin.SimpleListFilter):
+    """Фильтр наличия рецептов."""
+
+    title = 'Рецепты'
+    parameter_name = 'recipes'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('True', 'Есть рецепты'),
+            ('False', 'Нет рецептов'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset.filter(recipes__isnull=False).distinct()
+        elif self.value() == 'False':
+            return queryset.filter(recipes__isnull=True)
+
+
+class SubscribersFilter(admin.SimpleListFilter):
+    """Фильтр наличия подписчиков."""
+
+    title = 'Подписчики'
+    parameter_name = 'subscriber'
+
+    def lookups(self, request, model_admin):
+        """Значения фильтрации."""
+        return [
+            ('True', 'Есть подписчики'),
+            ('False', 'Нет подписчиков'),
+        ]
+
+    def queryset(self, request, queryset):
+        """Метод фильтрации данных класса."""
+        if self.value() == 'True':
+            return queryset.filter(subscriber__isnull=False).distinct()
+        elif self.value() == 'False':
+            return queryset.filter(subscriber__isnull=True)
+
+
+class SubscriptionsFilter(admin.SimpleListFilter):
+    """Фильтр по наличию подписки."""
+
+    title = 'Подписки'
+    parameter_name = 'subscription'
+
+    def lookups(self, request, model_admin):
+        """Значения фильтрации."""
+        return [
+            ('True', 'Есть подписки'),
+            ('False', 'Нет подписок'),
+        ]
+
+    def queryset(self, request, queryset):
+        """Метод фильтрации данных класса."""
+        if self.value() == 'True':
+            return queryset.filter(subscription__isnull=False).distinct()
+        elif self.value() == 'False':
+            return queryset.filter(subscription__isnull=True)
+
+
 class ProfileAdmin(admin.ModelAdmin):
     """Настройки админ панели модели Пользователя."""
 
     list_display = (
         'username',
         'email',
+        'first_name',
+        'last_name',
+        'avatar',
+        'recipe_count',
+        'get_subscriptions_count',
+        'get_favorites',
     )
     search_fields = ('email', 'username')
     list_display_links = ('username',)
+    list_filter = (SubscribersFilter, SubscriptionsFilter, RecipesFilter)
+
+    def get_favorites(self, obj):
+        return obj.favorite.count()
+
+    def get_subscriptions_count(self, obj):
+        return obj.subscription.count()
+
+    def recipe_count(self, obj):
+        return obj.recipes.count()
+
+    recipe_count.short_description = 'Количество рецептов'
+    recipe_count.admin_order_field = 'recipe_count'
+
+    get_subscriptions_count.short_description = 'Количество подписок'
+    get_subscriptions_count.admin_order_field = 'get_subscriptions_count'
+
+    get_favorites.short_description = 'Количество избранного'
+    get_favorites.admin_order_field = 'get_favorites'
 
     def save_model(self, request, obj, form, change):
         if not obj.username:

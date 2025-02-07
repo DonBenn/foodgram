@@ -183,6 +183,18 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'cooking_time'
         )
 
+    def validate(self, data):
+        """Метод валидации данных при редактировании рецепта."""
+        if not data.get('tags'):
+            raise serializers.ValidationError(
+                'Нельзя редактировать рецепт без тегов'
+            )
+        if not data.get('ingredient_recipe'):
+            raise serializers.ValidationError(
+                'Нельзя редактировать рецепт без ингредиентов'
+            )
+        return data
+
     def validate_tags(self, value):
         """Метод валидации поля тэгов."""
         if not value:

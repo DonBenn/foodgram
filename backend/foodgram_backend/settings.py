@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = env.str('DJANGO_KEY', default='django-insecure-zr&^6wna-h#9ah9(y(^&x5f5yihe+g0jk=s=rc!l1%obu1g*e6')
 
-DEBUG = env.bool('DEBUG_VALUE', default=True)
+DEBUG = env.bool('DEBUG_VALUE', default=False)
 
 ALLOWED_HOSTS = env.list('APPROVED_HOSTS', default=['84.201.154.209', 'localhost', '127.0.0.1', 'recipegram.sytes.net'])
 
